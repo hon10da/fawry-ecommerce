@@ -1,159 +1,133 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <algorithm>
 using namespace std;
 
-class Product {
+class Book {
+protected:
+    string isbn;
+    string title;
+    int year;
 public:
-    string name;
-    double price;
-    int quantity;
-    bool isExpired;
-    bool needsShipping;
-    double weight;
-
-    Product(string n, double p, int q, bool expired, bool shipping, double w)
-        : name(n), price(p), quantity(q), isExpired(expired), needsShipping(shipping), weight(w) {}
+    Book(string isbn, string title, int year) : isbn(isbn), title(title), year(year) {}
+    virtual void display() const {
+        cout << "ISBN: " << isbn << ", Title: " << title << ", Year: " << year << endl;
+    }
+    virtual void buy() const = 0;
+    int getYear() const { return year; }
 };
 
-class CartItem {
+class PaperBook : public Book {
+    string address;
 public:
-    Product* product;
-    int quantity;
-
-    CartItem(Product* p, int q) : product(p), quantity(q) {}
+    PaperBook(string isbn, string title, int year, string address)
+        : Book(isbn, title, year), address(address) {}
+    void buy() const override {
+        cout << "Sent 1 paper book to: " << address << endl;
+    }
 };
 
-class Cart {
-private:
-    vector<CartItem> items;
-
+class EBook : public Book {
+    string email;
 public:
-    void addItem(Product* p, int qty) {
-        if (p->isExpired || p->quantity < qty) {
-            cout << "Error: Product unavailable or expired: " << p->name << endl;
-        } else {
-            items.push_back(CartItem(p, qty));
-            p->quantity -= qty; // Reduce from stock directly
-        }
-    }
-
-    bool isEmpty() {
-        return items.empty();
-    }
-
-    void checkout(double& customerBalance) {
-        if (isEmpty()) {
-            cout << "Cart is empty!\n";
-            return;
-        }
-
-        double subtotal = 0;
-        double shipping = 0;
-        double totalWeight = 0;
-
-        for (CartItem item : items) {
-            subtotal += item.product->price * item.quantity;
-            if (item.product->needsShipping) {
-                shipping += 10 * item.quantity;
-                totalWeight += item.product->weight * item.quantity;
-            }
-        }
-
-        double total = subtotal + shipping;
-
-        if (customerBalance < total) {
-            cout << "Insufficient balance!\n";
-            return;
-        }
-
-        customerBalance -= total;
-
-        if (shipping > 0) {
-            cout << "** Shipping Details **\n";
-            for (CartItem item : items) {
-                if (item.product->needsShipping) {
-                    cout << item.quantity << "x " << item.product->name
-                         << " " << int(item.product->weight * 1000) << "g\n";
-                }
-            }
-            cout << "Total package weight: " << totalWeight << "kg\n\n";
-        }
-
-        cout << "** Checkout Receipt **\n";
-        for (CartItem item : items) {
-            double totalPrice = item.product->price * item.quantity;
-            cout << item.quantity << "x " << item.product->name
-                 << "\t" << totalPrice << "\n";
-        }
-        cout << "----------------------\n";
-        cout << "Subtotal\t" << subtotal << "\n";
-        cout << "Shipping\t" << shipping << "\n";
-        cout << "Total\t\t" << total << "\n";
-        cout << "Remaining Balance\t" << customerBalance << "\n";
+    EBook(string isbn, string title, int year, string email)
+        : Book(isbn, title, year), email(email) {}
+    void buy() const override {
+        cout << "Sent 1 ebook to email: " << email << endl;
     }
 };
+
+class ShowcaseBook : public Book {
+public:
+    ShowcaseBook(string isbn, string title, int year)
+        : Book(isbn, title, year) {}
+    void buy() const override {
+        cout << "This book is not for sale." << endl;
+    }
+};
+
+void showMenu() {
+    cout << "\n=== Bookstore Menu ===\n";
+    cout << "1. Add Book\n";
+    cout << "2. Buy Book\n";
+    cout << "3. Remove Old Books\n";
+    cout << "4. Show All Books\n";
+    cout << "0. Exit\n";
+    cout << "Enter your choice: ";
+}
 
 int main() {
-    // Predefined product list
-    vector<Product> products = {
-        Product("Cheese", 100, 10, false, true, 0.2),
-        Product("Biscuits", 150, 5, false, true, 0.7),
-        Product("ScratchCard", 50, 100, false, false, 0),
-        Product("TV", 300, 4, false, true, 5),
-        Product("Mobile", 500, 8, false, false, 0),
-        Product("Milk", 70, 3, true, true, 1.0) // expired
-    };
+    vector<Book*> books;
 
-    double customerBalance;
-    cout << "Enter customer balance: ";
-    cin >> customerBalance;
-    cin.ignore();
+    // إضافة بعض الكتب تلقائيًا
+    books.push_back(new PaperBook("111", "C++ Primer", 2012, "Giza"));
+    books.push_back(new EBook("222", "Python Basics", 2020, "mail@example.com"));
+    books.push_back(new ShowcaseBook("333", "History of AI", 1998));
 
-    Cart cart;
-    int option;
-    cout << "\nChoose input mode:\n1. Manual user input\n2. Run predefined test case\nChoice: ";
-    cin >> option;
-    cin.ignore();
+    int choice;
+    while (true) {
+        showMenu();
+        cin >> choice;
 
-    if (option == 1) {
-        int cartItems;
-        cout << "\nHow many products do you want to add to the cart? ";
-        cin >> cartItems;
-        cin.ignore();
+        if (choice == 0)
+            break;
 
-        for (int i = 0; i < cartItems; i++) {
-            string name;
-            int qty;
+        if (choice == 1) {
+            int type;
+            cout << "Enter book type (1: PaperBook, 2: EBook, 3: Showcase): ";
+            cin >> type;
 
-            cout << "\nEnter product name: ";
-            getline(cin, name);
-
-            auto it = find_if(products.begin(), products.end(), [&](Product& p) {
-                return p.name == name;
-            });
-
-            if (it == products.end()) {
-                cout << "Product not found!\n";
-                continue;
-            }
-
-            cout << "Enter quantity: ";
-            cin >> qty;
+            string isbn, title;
+            int year;
+            cout << "ISBN: "; cin >> isbn;
             cin.ignore();
+            cout << "Title: "; getline(cin, title);
+            cout << "Year: "; cin >> year;
 
-            cart.addItem(&(*it), qty);
+            if (type == 1) {
+                string address;
+                cin.ignore();
+                cout << "Address: "; getline(cin, address);
+                books.push_back(new PaperBook(isbn, title, year, address));
+            } else if (type == 2) {
+                string email;
+                cin.ignore();
+                cout << "Email: "; getline(cin, email);
+                books.push_back(new EBook(isbn, title, year, email));
+            } else if (type == 3) {
+                books.push_back(new ShowcaseBook(isbn, title, year));
+            }
+        } else if (choice == 2) {
+            int index;
+            cout << "Enter book index to buy (starting from 0): ";
+            cin >> index;
+            if (index >= 0 && index < books.size()) {
+                books[index]->buy();
+            } else {
+                cout << "Invalid index." << endl;
+            }
+        } else if (choice == 3) {
+            int currentYear;
+            cout << "Enter current year: ";
+            cin >> currentYear;
+            for (int i = 0; i < books.size(); ++i) {
+                if (books[i]->getYear() < currentYear - 10) {
+                    delete books[i];
+                    books.erase(books.begin() + i);
+                    --i;
+                }
+            }
+            cout << "Old books removed.\n";
+        } else if (choice == 4) {
+            for (int i = 0; i < books.size(); ++i) {
+                cout << i << ". ";
+                books[i]->display();
+            }
         }
-    } else {
-        // Predefined test case from PDF
-        cart.addItem(&products[0], 2); // Cheese
-        cart.addItem(&products[3], 3); // TV
-        cart.addItem(&products[2], 1); // ScratchCard
     }
 
-    cout << "\n\n--- Final Receipt ---\n";
-    cart.checkout(customerBalance);
-
+    for (Book* book : books) {
+        delete book;
+    }
     return 0;
 }
